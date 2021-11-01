@@ -38,7 +38,7 @@ defmt = { version = "0.2", optional = true}
 log = { version = "0.4", default-features = false, optional = true }
 
 [dev-dependencies]
-color-backtrace = "0.4.2"
+color-backtrace = "0.5.1"
 
 [[bin]]
 name = "sx1231-util"
