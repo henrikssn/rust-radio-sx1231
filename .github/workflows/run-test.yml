@@ -17,7 +17,6 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: clippy
-        args: --features defmt
   format:
     runs-on: ubuntu-latest
     steps:
@@ -49,11 +48,11 @@ jobs:
     - name: Build (defmt)
       run: |
         set -ex
-        cargo build --features defmt
+        cargo build --no-default-features --features defmt
     - name: Build (log)
       run: |
         set -ex
-        cargo build --features log
+        cargo build
   test:
     runs-on: ubuntu-latest
     steps:
@@ -68,4 +67,4 @@ jobs:
     - name: Test
       run: |
         set -ex
-        cargo test --features defmt
+        cargo test

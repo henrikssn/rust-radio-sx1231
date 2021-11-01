@@ -9,7 +9,7 @@ edition = "2018"
 
 [features]
 util = [ "structopt", "linux-embedded-hal", "simplelog", "humantime", "bitbang-hal", "shared-bus", "nb", "void" ]
-default = []
+default = ["log"]
 
 defmt-default = ["defmt"]
 defmt-trace = ["defmt"]
