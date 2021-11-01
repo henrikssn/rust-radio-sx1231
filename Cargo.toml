@@ -1,7 +1,7 @@
 [package]
 name = "radio-sx1231"
 description = "Rust driver for the Semtec SX1231 Sub GHZ (G)FSK/OOK Radio ICs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Erik Henriksson <erikhenrikssn@gmail.com>"]
 repository = "https://github.com/rust-iot/rust-radio-sx1231"
 license = "MPL-2.0"
