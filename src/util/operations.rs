@@ -61,8 +61,7 @@ where
         }
         Operation::Rssi(config) => {
             do_rssi(radio, config.continuous, *config.period).expect("RSSI error");
-        }
-        //_ => warn!("unsuppored command: {:?}", opts.command),
+        } //_ => warn!("unsuppored command: {:?}", opts.command),
     }
 
     Ok(())
