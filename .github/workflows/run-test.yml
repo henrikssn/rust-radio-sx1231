@@ -16,7 +16,8 @@ jobs:
     - name: Clippy
       uses: actions-rs/cargo@v1
       with:
-        command: clippy --features defmt
+        command: clippy
+        args: --features defmt
   format:
     runs-on: ubuntu-latest
     steps:
