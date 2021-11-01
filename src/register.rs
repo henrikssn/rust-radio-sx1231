@@ -42,7 +42,8 @@ pub enum ModemMode {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct OpMode {
-    #[skip] _reserved: B2,
+    #[skip]
+    _reserved: B2,
     pub modem_mode: ModemMode,
     pub listen_abort: bool,
     pub listen_on: bool,
@@ -87,7 +88,8 @@ pub enum DataMode {
 pub struct DataModulation {
     pub mod_type: ModulationType,
     pub mode: DataMode,
-    #[skip] __: B1,
+    #[skip]
+    __: B1,
 }
 
 impl Reg for DataModulation {
@@ -147,7 +149,8 @@ impl Reg for CarrierFreq {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Oscillator {
-    #[skip] __: B6,
+    #[skip]
+    __: B6,
     pub rc_cal_done: bool,
     pub rc_cal_start: bool,
 }
@@ -161,9 +164,11 @@ impl Reg for Oscillator {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct AfcControl {
-    #[skip] __: B5,
+    #[skip]
+    __: B5,
     pub low_beta_on: bool,
-    #[skip] __2: B2,
+    #[skip]
+    __2: B2,
 }
 
 impl Reg for AfcControl {
@@ -206,7 +211,8 @@ pub enum ListenBaseDuration {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Listen {
-    #[skip] __: B1,
+    #[skip]
+    __: B1,
     pub end: ListenEnd,
     pub criteria: ListenCriteria,
     pub rx_base: ListenBaseDuration,
@@ -226,7 +232,8 @@ impl Reg for Listen {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct AfcFei {
-    #[skip] __: B5,
+    #[skip]
+    __: B5,
     pub afc_auto_on: bool,
     pub afc_clear: bool,
     pub afc_start: bool,
@@ -293,7 +300,8 @@ pub enum RampTime {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct PaRamp {
     pub time: RampTime,
-    #[skip] __: B4,
+    #[skip]
+    __: B4,
 }
 
 impl Reg for PaRamp {
@@ -307,7 +315,8 @@ impl Reg for PaRamp {
 pub struct Ocp {
     pub trim: B4,
     pub ocp_on: bool,
-    #[skip] __: B3,
+    #[skip]
+    __: B3,
 }
 
 impl Reg for Ocp {
@@ -338,14 +347,14 @@ pub enum LnaZin {
 }
 
 #[bitfield]
-#[allow(clippy::unnecessary_cast)]
 #[derive(BitfieldSpecifier, Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Lna {
     pub gain_select: LnaGainSelect,
     pub current_gain: B3,
-    #[skip] __: B1,
+    #[skip]
+    __: B1,
     pub zin: LnaZin,
 }
 
@@ -429,7 +438,8 @@ impl Reg for AfcBw {
 pub struct RssiConfig {
     pub start: bool,
     pub done: bool,
-    #[skip] __: B6,
+    #[skip]
+    __: B6,
 }
 
 impl Reg for RssiConfig {
@@ -461,7 +471,8 @@ pub struct IrqFlags {
     pub tx_ready: bool,
     pub rx_ready: bool,
     pub mode_ready: bool,
-    #[skip] __: bool,
+    #[skip]
+    __: bool,
     pub crc_ok: bool,
     pub payload_ready: bool,
     pub packet_sent: bool,
@@ -580,7 +591,8 @@ impl Reg for SyncConfig {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct SyncValue {
-    #[skip] __: B8,
+    #[skip]
+    __: B8,
 }
 
 impl Reg for SyncValue {
@@ -639,7 +651,8 @@ pub enum PacketFormat {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct PacketConfig1 {
-    #[skip] __: B1,
+    #[skip]
+    __: B1,
     pub address_filter: AddressFilter,
     pub crc_auto_clear: CrcAutoClear,
     pub crc: Crc,

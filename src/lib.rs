@@ -34,7 +34,7 @@ use core::marker::PhantomData;
 
 extern crate embedded_hal as hal;
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::{OutputPin};
+use hal::digital::v2::OutputPin;
 
 extern crate radio;
 use radio::{Channel as _, Interrupts as _, Power as _, Rssi as _, State as _};
@@ -284,11 +284,7 @@ where
     pub fn set_frequency(&mut self, freq: u32) -> Result<(), Error<SpiError, PinError>> {
         let channel = self.freq_to_channel_index(freq);
 
-        let outgoing = [
-            (channel >> 16) as u8,
-            (channel >> 8) as u8,
-            channel as u8,
-        ];
+        let outgoing = [(channel >> 16) as u8, (channel >> 8) as u8, channel as u8];
 
         debug!("Set channel to index: {:?} (freq: {:?})", channel, freq);
 
