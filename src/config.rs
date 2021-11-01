@@ -142,7 +142,7 @@ impl Default for Config {
             channel: Channel::default(),
             power: 13,
             xtal_freq: 32_000_000u32,
-            freq_step: 61.03515625,
+            freq_step: 61.035156,
             timeout_ticks: 2048,
             rssi_threshold: 200, // -100 dBm
             auto_rx_restart: AutoRxRestart::On,
@@ -166,7 +166,7 @@ pub enum PayloadMode {
 }
 
 /// Received packet information
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct PacketInfo {
@@ -174,12 +174,6 @@ pub struct PacketInfo {
     pub rssi: i16,
     /// Signal to Noise Ratio
     pub snr: Option<i16>,
-}
-
-impl Default for PacketInfo {
-    fn default() -> Self {
-        Self { rssi: 0, snr: None }
-    }
 }
 
 impl ReceiveInfo for PacketInfo {

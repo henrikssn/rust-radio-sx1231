@@ -18,10 +18,10 @@
 use core::cmp::{max, min};
 
 #[cfg(feature = "log")]
-use log::{debug, info, trace, warn};
+use log::{debug, trace, warn};
 
 #[cfg(feature = "defmt")]
-use defmt::{debug, info, trace, warn};
+use defmt::{debug, trace, warn};
 
 extern crate modular_bitfield;
 use modular_bitfield::prelude::*;
@@ -34,7 +34,7 @@ use core::marker::PhantomData;
 
 extern crate embedded_hal as hal;
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::{InputPin, OutputPin};
+use hal::digital::v2::{OutputPin};
 
 extern crate radio;
 use radio::{Channel as _, Interrupts as _, Power as _, Rssi as _, State as _};
@@ -151,14 +151,14 @@ where
         self.set_sync_word(config.sync_word)?;
 
         // Set payload length
-        let (packet_format, packet_len_msb) = match config.payload_mode {
+        let packet_format = match config.payload_mode {
             PayloadMode::Constant(v) => {
                 self.write_reg(PayloadLength::ADDRESS, v as u8)?;
-                (PacketFormat::Fixed, (v >> 8) & 0x07)
+                PacketFormat::Fixed
             }
             PayloadMode::Variable => {
                 self.write_reg(PayloadLength::ADDRESS, 0xFF)?;
-                (PacketFormat::Variable, 0)
+                PacketFormat::Variable
             }
         };
 
@@ -250,7 +250,7 @@ where
     }
 
     fn set_sync_word(&mut self, sync_word: &[u8]) -> Result<(), Error<SpiError, PinError>> {
-        if sync_word.len() > 0 {
+        if !sync_word.is_empty() {
             self.write_regs(
                 SyncConfig::ADDRESS,
                 &SyncConfig::new()
@@ -287,7 +287,7 @@ where
         let outgoing = [
             (channel >> 16) as u8,
             (channel >> 8) as u8,
-            (channel >> 0) as u8,
+            channel as u8,
         ];
 
         debug!("Set channel to index: {:?} (freq: {:?})", channel, freq);
@@ -376,7 +376,7 @@ where
         self.spi
             .write(&[reg.into() | 0x80])
             .map_err(|e| Error::Spi(e))?;
-        self.spi.write(&data).map_err(|e| Error::Spi(e))?;
+        self.spi.write(data).map_err(|e| Error::Spi(e))?;
 
         self.cs.set_high().map_err(|e| Error::Pin(e))?;
 
@@ -393,7 +393,7 @@ where
             .map_err(|e| Error::Spi(e))?;
 
         // Data
-        self.spi.write(&data).map_err(|e| Error::Spi(e))?;
+        self.spi.write(data).map_err(|e| Error::Spi(e))?;
 
         self.cs.set_high().map_err(|e| Error::Pin(e))?;
 
@@ -401,7 +401,7 @@ where
     }
 
     /// Read from the specified buffer
-    fn read_fifo<'a>(&mut self, len: usize) -> Result<(), Error<SpiError, PinError>> {
+    fn read_fifo(&mut self, len: usize) -> Result<(), Error<SpiError, PinError>> {
         let rx_buf_len = self.rx_buf_len;
         if rx_buf_len + len > self.rx_buf.len() {
             return Err(Error::BufferSize(rx_buf_len + len));
