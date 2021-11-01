@@ -1,0 +1,17 @@
+[radio-0]
+spi = "/dev/spidev0.0"
+baud = 1000000
+chip_select = 8
+reset = 24
+busy = 22
+ready = 0
+
+
+[radio-1]
+spi = "/dev/spidev0.1"
+baud = 1000000
+chip_select = 7
+reset = 25
+busy = 23
+ready = 1
+

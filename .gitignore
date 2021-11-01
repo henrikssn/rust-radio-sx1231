@@ -1,0 +1,6 @@
+/target
+**/*.rs.bk
+Cargo.lock
+src/sx1276/mod.rs
+libSx1231/
+.vscode/
