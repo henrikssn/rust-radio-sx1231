@@ -29,7 +29,7 @@ use linux_embedded_hal::sysfs_gpio::Direction;
 use linux_embedded_hal::{Delay, Pin as Pindev};
 
 extern crate bitbang_hal;
-use bitbang_hal::spi::{SPI, MODE_0};
+use bitbang_hal::spi::{MODE_0, SPI};
 
 extern crate embedded_hal;
 use embedded_hal::timer::{CountDown, Periodic};
@@ -38,10 +38,9 @@ extern crate shared_bus;
 use shared_bus::BusManagerSimple;
 
 extern crate log;
-use log::{debug};
+use log::debug;
 extern crate simplelog;
-use simplelog::{TermLogger, TerminalMode, LevelFilter};
-
+use simplelog::{LevelFilter, TermLogger, TerminalMode};
 
 pub fn load_spi() -> SPI<Pindev, Pindev, Pindev, SysTimer> {
     let miso = load_pin(9, Direction::In);
@@ -86,12 +85,14 @@ fn integration() {
     let cs0 = load_pin(8, Direction::Out);
     let busy0 = load_pin(22, Direction::In);
     let rst0 = load_pin(24, Direction::Out);
-    let mut radio1 = Sx1231::new(spi_proxy.acquire_spi(), cs0, busy0, rst0, Delay {}, &config).expect("error creating radio1");
+    let mut radio1 = Sx1231::new(spi_proxy.acquire_spi(), cs0, busy0, rst0, Delay {}, &config)
+        .expect("error creating radio1");
 
     let cs1 = load_pin(7, Direction::Out);
     let busy1 = load_pin(23, Direction::In);
     let rst1 = load_pin(25, Direction::Out);
-    let mut radio2 = Sx1231::new(spi_proxy.acquire_spi(), cs1, busy1, rst1, Delay {}, &config).expect("error creating radio2");
+    let mut radio2 = Sx1231::new(spi_proxy.acquire_spi(), cs1, busy1, rst1, Delay {}, &config)
+        .expect("error creating radio2");
 
     // Load configurations from file
     // let configs = load_config::<HashMap<String, DeviceConfig>>(&config_file);

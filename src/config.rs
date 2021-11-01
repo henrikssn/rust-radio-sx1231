@@ -6,7 +6,6 @@
 //
 // Copyright 2020-2021 Erik Henriksson
 
-
 use crate::register::*;
 
 use radio::ReceiveInfo;
@@ -171,16 +170,16 @@ pub enum PayloadMode {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct PacketInfo {
-  /// Received Signal Strength Indication
-  pub rssi: i16,
-  /// Signal to Noise Ratio
-  pub snr: Option<i16>,
+    /// Received Signal Strength Indication
+    pub rssi: i16,
+    /// Signal to Noise Ratio
+    pub snr: Option<i16>,
 }
 
 impl Default for PacketInfo {
-  fn default() -> Self {
-      Self { rssi: 0, snr: None }
-  }
+    fn default() -> Self {
+        Self { rssi: 0, snr: None }
+    }
 }
 
 impl ReceiveInfo for PacketInfo {

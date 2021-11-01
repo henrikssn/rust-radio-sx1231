@@ -10,5 +10,5 @@
 // Copyright 2020-2021 Erik Henriksson
 
 pub use crate::config::{Channel, Config, PacketInfo, PayloadMode};
-pub use crate::register::{ModemMode};
+pub use crate::register::ModemMode;
 pub use crate::{Error, Sx1231};

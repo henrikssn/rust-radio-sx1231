@@ -15,13 +15,13 @@
 
 #![no_std]
 
-use core::cmp::{min, max};
+use core::cmp::{max, min};
 
 #[cfg(feature = "log")]
-use log::{warn, info, debug, trace};
+use log::{debug, info, trace, warn};
 
 #[cfg(feature = "defmt")]
-use defmt::{warn, info, debug, trace};
+use defmt::{debug, info, trace, warn};
 
 extern crate modular_bitfield;
 use modular_bitfield::prelude::*;
@@ -29,8 +29,8 @@ use modular_bitfield::prelude::*;
 #[cfg(feature = "serde")]
 extern crate serde;
 
-use core::marker::PhantomData;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 
 extern crate embedded_hal as hal;
 use hal::blocking::spi::{Transfer, Write};
@@ -93,8 +93,7 @@ pub enum Error<SpiError, PinError> {
     InvalidPacketSize(usize, usize),
 }
 
-impl<Spi, CsPin, SpiError, PinError>
-    Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -118,8 +117,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError>
-    Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -140,7 +138,7 @@ where
             &DataModulation::new()
                 .with_mod_type(config.modulation)
                 .with_mode(config.data_mode)
-                .into_bytes()
+                .into_bytes(),
         )?;
 
         // // Set preamble length
@@ -173,7 +171,7 @@ where
                 .with_crc(config.crc)
                 .with_crc_auto_clear(config.crc_auto_clear)
                 .with_address_filter(config.address_filter)
-                .into_bytes()
+                .into_bytes(),
         )?;
 
         // Set packetconfig2 register
@@ -182,7 +180,7 @@ where
             &PacketConfig2::new()
                 .with_auto_rx_restart(config.auto_rx_restart)
                 .with_inter_packet_rx_delay(config.inter_packet_rx_delay)
-                .into_bytes()
+                .into_bytes(),
         )?;
 
         // Configure TXStart
@@ -196,39 +194,51 @@ where
 
         self.write_regs(
             RssiThreshold::ADDRESS,
-            &RssiThreshold::new().with_value(config.rssi_threshold).into_bytes())?;
+            &RssiThreshold::new()
+                .with_value(config.rssi_threshold)
+                .into_bytes(),
+        )?;
 
         self.write_regs(
             AfcControl::ADDRESS,
-            &AfcControl::new().with_low_beta_on(config.afc_low_beta).into_bytes())?;
+            &AfcControl::new()
+                .with_low_beta_on(config.afc_low_beta)
+                .into_bytes(),
+        )?;
 
         if config.afc_low_beta {
             self.write_regs(
                 0x6f, // RegTestDagc
-                &[0x20])?; // Improved margin, use if AfcLowBetaOn=1
+                &[0x20],
+            )?; // Improved margin, use if AfcLowBetaOn=1
             self.write_regs(
                 0x71, // RegTestAfc
-                &[20])?; // LowBetaAfcOffset = 20 * 488 = 9.8kHz (should be ~10% of RxBw and > DCC cutoff)
+                &[20],
+            )?; // LowBetaAfcOffset = 20 * 488 = 9.8kHz (should be ~10% of RxBw and > DCC cutoff)
         }
 
         self.write_regs(
             AfcFei::ADDRESS,
-            &AfcFei::new().with_afc_auto_on(true).into_bytes())?;
+            &AfcFei::new().with_afc_auto_on(true).into_bytes(),
+        )?;
 
         self.write_regs(
             0x2bu8, //timeout rssi threshold
-            &[64u8])?; // 64 * 16 * 10 us = 12ms
+            &[64u8],
+        )?; // 64 * 16 * 10 us = 12ms
 
         self.write_regs(
             Lna::ADDRESS,
             &Lna::new()
                 .with_zin(LnaZin::Zin50Ohm)
                 .with_gain_select(LnaGainSelect::Agc)
-                .into_bytes())?;
+                .into_bytes(),
+        )?;
 
         self.write_regs(
             0x58, // RegTestLna
-            &[0x2d])?; // SensitivityBoost
+            &[0x2d],
+        )?; // SensitivityBoost
 
         // Configure power amplifier
         self.set_power(config.power)?;
@@ -246,15 +256,13 @@ where
                 &SyncConfig::new()
                     .with_sync_on(true)
                     .with_size_minus_one(sync_word.len() as u8 - 1)
-                    .into_bytes()
+                    .into_bytes(),
             )?;
             self.write_regs(SyncValue::ADDRESS, sync_word)?;
         } else {
             self.write_regs(
                 SyncConfig::ADDRESS,
-                &SyncConfig::new()
-                    .with_sync_on(false)
-                    .into_bytes()
+                &SyncConfig::new().with_sync_on(false).into_bytes(),
             )?;
         }
         Ok(())
@@ -336,18 +344,16 @@ where
     }
 
     /// Read from the specified register
-    fn read_regs<R>(
-        &mut self,
-        reg: R,
-        data: &mut [u8],
-    ) -> Result<(), Error<SpiError, PinError>>
-        where
-            R: Copy + Clone + Debug + Into<u8>,
+    fn read_regs<R>(&mut self, reg: R, data: &mut [u8]) -> Result<(), Error<SpiError, PinError>>
+    where
+        R: Copy + Clone + Debug + Into<u8>,
     {
         self.cs.set_low().map_err(|e| Error::Pin(e))?;
 
         // Send command then read data
-        self.spi.write(&[reg.into() & 0x7F]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .write(&[reg.into() & 0x7F])
+            .map_err(|e| Error::Spi(e))?;
         self.spi.transfer(data).map_err(|e| Error::Spi(e))?;
 
         self.cs.set_high().map_err(|e| Error::Pin(e))?;
@@ -367,7 +373,9 @@ where
         trace!("Write reg:  {} (0x{}): {}", reg, reg.into(), data);
 
         // Send command then write data
-        self.spi.write(&[reg.into() | 0x80]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .write(&[reg.into() | 0x80])
+            .map_err(|e| Error::Spi(e))?;
         self.spi.write(&data).map_err(|e| Error::Spi(e))?;
 
         self.cs.set_high().map_err(|e| Error::Pin(e))?;
@@ -380,7 +388,9 @@ where
         self.cs.set_low().map_err(|e| Error::Pin(e))?;
 
         // Setup FIFO buffer write
-        self.spi.write(&[Fifo::ADDRESS | 0x80]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .write(&[Fifo::ADDRESS | 0x80])
+            .map_err(|e| Error::Spi(e))?;
 
         // Data
         self.spi.write(&data).map_err(|e| Error::Spi(e))?;
@@ -395,17 +405,22 @@ where
         let rx_buf_len = self.rx_buf_len;
         if rx_buf_len + len > self.rx_buf.len() {
             return Err(Error::BufferSize(rx_buf_len + len));
-        } else if len > self.rx_buf.len() { // Addition above might overflow
+        } else if len > self.rx_buf.len() {
+            // Addition above might overflow
             return Err(Error::BufferSize(len));
         }
 
         self.cs.set_low().map_err(|e| Error::Pin(e))?;
 
         // Setup FIFO buffer read
-        self.spi.write(&[Fifo::ADDRESS]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .write(&[Fifo::ADDRESS])
+            .map_err(|e| Error::Spi(e))?;
 
         // Read the rest of the FIFO data
-        self.spi.transfer(&mut self.rx_buf[rx_buf_len..(rx_buf_len+len)]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .transfer(&mut self.rx_buf[rx_buf_len..(rx_buf_len + len)])
+            .map_err(|e| Error::Spi(e))?;
         self.rx_buf_len += len;
 
         self.cs.set_high().map_err(|e| Error::Pin(e))?;
@@ -414,17 +429,12 @@ where
     }
 }
 
-
-impl<Spi, CsPin, SpiError, PinError>
-    Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
 {
-    pub fn set_state_checked(
-        &mut self,
-        state: ModemMode,
-    ) -> Result<(), Error<SpiError, PinError>> {
+    pub fn set_state_checked(&mut self, state: ModemMode) -> Result<(), Error<SpiError, PinError>> {
         // Send set state command
         trace!("Set state to: {:?} (0x{:02x})", state, state as u8);
         self.set_state(state)?;
@@ -442,7 +452,7 @@ where
             // Timeout eventually
             if ticks >= self.config.timeout_ticks {
                 warn!("Set state timeout: {:?}, {:?}", state, s);
-                return Err(Error::Timeout)
+                return Err(Error::Timeout);
             }
             ticks += 1;
         }
@@ -450,8 +460,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::State
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::State for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -474,8 +483,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Power
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Power for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -507,8 +515,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Interrupts
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Interrupts for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -524,18 +531,17 @@ where
         let irq = IrqFlags::from_bytes(regs);
 
         if clear {
-            self.write_regs(IrqFlags::ADDRESS,
-                &irq.with_rssi(false)
-                    .with_fifo_overrun(false)
-                    .into_bytes())?;
+            self.write_regs(
+                IrqFlags::ADDRESS,
+                &irq.with_rssi(false).with_fifo_overrun(false).into_bytes(),
+            )?;
         }
 
         Ok(irq)
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Channel
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Channel for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -552,12 +558,11 @@ where
         // f32::round
         let round = |x: f32| -> u32 {
             let integer = x as u32;
-                if (x - (integer as f32)) < 0.5 {
-                    integer
-                }
-                else {
-                    integer + 1
-                }
+            if (x - (integer as f32)) < 0.5 {
+                integer
+            } else {
+                integer + 1
+            }
         };
 
         // Calculate channel configuration
@@ -571,7 +576,10 @@ where
 
         // Set bitrate
         // self.write_regs(Bitrate::ADDRESS, Bitrate::new().with_bitrate(datarate).into_bytes())?;
-        self.write_regs(Bitrate::ADDRESS, &[(datarate >> 8) as u8, (datarate & 0xFF) as u8])?;
+        self.write_regs(
+            Bitrate::ADDRESS,
+            &[(datarate >> 8) as u8, (datarate & 0xFF) as u8],
+        )?;
 
         // Set bandwidths
         self.write_reg(RxBw::ADDRESS, 0b0100_0000 | channel.bw as u8)?;
@@ -581,8 +589,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Transmit
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Transmit for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -606,10 +613,10 @@ where
 
         // Length
         match self.config.payload_mode {
-            PayloadMode::Constant(_) => {},
+            PayloadMode::Constant(_) => {}
             PayloadMode::Variable => {
                 self.write_fifo(&[data.len() as u8])?;
-            },
+            }
         }
 
         self.write_fifo(&data[..min(64, data.len())])?;
@@ -649,8 +656,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Receive
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Receive for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -690,17 +696,15 @@ where
         let s = self.get_state()?;
         let mut res = Ok(false);
 
-        trace!(
-            "Check Receive (State: {:?}, IRQ: {:?})",
-            s, irq
-        );
+        trace!("Check Receive (State: {:?}, IRQ: {:?})", s, irq);
 
         if irq.rssi() {
             let rssi = self.poll_rssi()?;
             trace!("Check Receive RSSI: {:?}", rssi);
         }
 
-        if irq.payload_ready() { // Read out last part of packet.
+        if irq.payload_ready() {
+            // Read out last part of packet.
             self.set_state_checked(ModemMode::Standby)?;
             if self.rx_buf_len == 0 {
                 self.read_fifo(1)?;
@@ -711,12 +715,15 @@ where
                 return Err(Error::InvalidPacketSize(packet_len, self.rx_buf_len + 1));
             }
             // Read one byte extra as length byte does not count.
-            self.read_fifo(packet_len-self.rx_buf_len+1)?;
+            self.read_fifo(packet_len - self.rx_buf_len + 1)?;
             debug!("RX complete! ({} bytes)", packet_len);
             res = Ok(true)
         } else if irq.fifo_level() {
             self.read_fifo(32)?;
-            trace!("Received chunk: {:?}", &self.rx_buf[(self.rx_buf_len-32)..self.rx_buf_len]);
+            trace!(
+                "Received chunk: {:?}",
+                &self.rx_buf[(self.rx_buf_len - 32)..self.rx_buf_len]
+            );
         } else if irq.timeout() {
             trace!("RX timeout");
             self.rx_buf_len = 0;
@@ -759,8 +766,7 @@ where
     }
 }
 
-impl<Spi, CsPin, SpiError, PinError> radio::Rssi
-    for Sx1231<Spi, CsPin, SpiError, PinError>
+impl<Spi, CsPin, SpiError, PinError> radio::Rssi for Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,

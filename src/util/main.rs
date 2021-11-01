@@ -14,7 +14,7 @@
 #[macro_use]
 extern crate log;
 extern crate simplelog;
-use simplelog::{TermLogger, TerminalMode, LevelFilter};
+use simplelog::{LevelFilter, TermLogger, TerminalMode};
 
 use std::time::{Duration, Instant};
 
@@ -32,9 +32,9 @@ extern crate embedded_hal;
 use embedded_hal::timer::{CountDown, Periodic};
 
 extern crate linux_embedded_hal;
+use linux_embedded_hal::spidev;
 use linux_embedded_hal::sysfs_gpio::Direction;
 use linux_embedded_hal::{Delay, Pin, Spidev};
-use linux_embedded_hal::spidev;
 
 extern crate radio;
 
@@ -43,7 +43,7 @@ use radio_sx1231::prelude::*;
 use radio_sx1231::register::{Bandwidth, ModulationType};
 
 extern crate bitbang_hal;
-use bitbang_hal::spi::{SPI, MODE_0};
+use bitbang_hal::spi::{MODE_0, SPI};
 
 mod options;
 use options::*;
@@ -84,7 +84,8 @@ fn main() {
 
     let ready = Pin::new(5);
     ready.export().expect("error exporting ready pin");
-    ready.set_direction(Direction::Out)
+    ready
+        .set_direction(Direction::Out)
         .expect("error setting busy pin direction");
 
     // Generate configuration
@@ -99,7 +100,7 @@ fn main() {
             }
 
             config.channel = channel;
-        },
+        }
         _ => (),
     }
 
