@@ -1,4 +1,4 @@
-# rust-radio-sx127x
+# rust-radio-sx1231
 
 A primarily rust driver (and command line utility) for the [Semtech SX1231] sub ghz ISM band radio IC.
 
@@ -10,7 +10,7 @@ A primarily rust driver (and command line utility) for the [Semtech SX1231] sub 
 
 [![GitHub tag](https://img.shields.io/github/tag/rust-iot/rust-radio-sx1231.svg)](https://github.com/rust-iot/rust-radio-sx1231)[![Build Status](https://github.com/rust-iot/rust-radio-sx1231/actions/workflows/run-test.yml/badge.svg)](https://github.com/rust-iot/rust-radio-sx1231/actions/workflows/run-test.yml)[![crates.io](https://img.shields.io/crates/v/radio-sx1231.svg)](https://crates.io/crates/radio-sx1231) [![Documentation](https://docs.rs/radio-sx1231/badge.svg)](https://docs.rs/radio-sx1231)
 
-[Open Issues](https://github.com/rust-iot/rust-radio-sx127x/issues)
+[Open Issues](https://github.com/rust-iot/rust-radio-sx1231/issues)
 
 ## Usage
 
