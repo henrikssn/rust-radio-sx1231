@@ -20,7 +20,7 @@ defmt-error = ["defmt"]
 
 [dependencies]
 libc = { version = "0.2", optional = true }
-radio = "0.9"
+radio = "0.10"
 embedded-hal = { version = "0.2.4", features = ["unproven"] }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 
