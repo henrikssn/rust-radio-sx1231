@@ -138,112 +138,79 @@ where
         // // Set channel configuration
         self.set_channel(&config.channel)?;
 
-        self.write_regs(
-            DataModulation::ADDRESS,
-            &DataModulation::new()
+        self.write_register(
+            DataModulation::new()
                 .with_mod_type(config.modulation)
-                .with_mode(config.data_mode)
-                .into_bytes(),
+                .with_mode(config.data_mode),
         )?;
 
-        // // Set preamble length
-        let preamble_len = [
-            (config.preamble_len >> 8) as u8,
-            (config.preamble_len & 0xFF) as u8,
-        ];
-        self.write_regs(Preamble::ADDRESS, &preamble_len)?;
+        self.write_register(Preamble::new().with_length(config.preamble_len))?;
 
         self.set_sync_word(config.sync_word)?;
 
         // Set payload length
         let packet_format = match config.payload_mode {
             PayloadMode::Constant(v) => {
-                self.write_reg(PayloadLength::ADDRESS, v as u8)?;
+                self.write_register(PayloadLength::new().with_length(v as u8))?;
                 PacketFormat::Fixed
             }
             PayloadMode::Variable => {
-                self.write_reg(PayloadLength::ADDRESS, 0xFF)?;
+                self.write_register(PayloadLength::new().with_length(0xFF))?;
                 PacketFormat::Variable
             }
         };
 
         // Set packetconfig1 register
-        self.write_regs(
-            PacketConfig1::ADDRESS,
-            &PacketConfig1::new()
+        self.write_register(
+            PacketConfig1::new()
                 .with_packet_format(packet_format)
                 .with_dc_free(config.dc_free)
                 .with_crc(config.crc)
                 .with_crc_auto_clear(config.crc_auto_clear)
-                .with_address_filter(config.address_filter)
-                .into_bytes(),
+                .with_address_filter(config.address_filter),
         )?;
 
         // Set packetconfig2 register
-        self.write_regs(
-            PacketConfig2::ADDRESS,
-            &PacketConfig2::new()
+        self.write_register(
+            PacketConfig2::new()
                 .with_auto_rx_restart(config.auto_rx_restart)
-                .with_inter_packet_rx_delay(config.inter_packet_rx_delay)
-                .into_bytes(),
+                .with_inter_packet_rx_delay(config.inter_packet_rx_delay),
         )?;
 
         // Configure TXStart
-        self.write_regs(
-            FifoThreshold::ADDRESS,
-            &FifoThreshold::new()
+        self.write_register(
+            FifoThreshold::new()
                 .with_start_condition(config.tx_start_condition)
-                .with_threshold(config.fifo_threshold)
-                .into_bytes(),
+                .with_threshold(config.fifo_threshold),
         )?;
 
-        self.write_regs(
-            RssiThreshold::ADDRESS,
-            &RssiThreshold::new()
-                .with_value(config.rssi_threshold)
-                .into_bytes(),
-        )?;
+        self.write_register(RssiThreshold::new().with_value(config.rssi_threshold))?;
 
-        self.write_regs(
-            AfcControl::ADDRESS,
-            &AfcControl::new()
-                .with_low_beta_on(config.afc_low_beta)
-                .into_bytes(),
-        )?;
+        self.write_register(AfcControl::new().with_low_beta_on(config.afc_low_beta))?;
 
         if config.afc_low_beta {
-            self.write_regs(
-                0x6f, // RegTestDagc
-                &[0x20],
-            )?; // Improved margin, use if AfcLowBetaOn=1
-            self.write_regs(
-                0x71, // RegTestAfc
-                &[20],
-            )?; // LowBetaAfcOffset = 20 * 488 = 9.8kHz (should be ~10% of RxBw and > DCC cutoff)
+            // Improved margin, use if AfcLowBetaOn=1
+            self.write_register(
+                TestDagc::new().with_continous_dagc(ContinousDagc::ImprovedMarginLowBetaOn),
+            )?;
+            // LowBetaAfcOffset = 20 * 488 = 9.8kHz (should be ~10% of RxBw and > DCC cutoff)
+            self.write_register(TestAfc::new().with_low_beta_offset(20))?;
         }
 
-        self.write_regs(
-            AfcFei::ADDRESS,
-            &AfcFei::new().with_afc_auto_on(true).into_bytes(),
-        )?;
+        self.write_register(AfcFei::new().with_afc_auto_on(true))?;
 
-        self.write_regs(
-            0x2bu8, //timeout rssi threshold
-            &[64u8],
-        )?; // 64 * 16 * 10 us = 12ms
+        // 64 * 16 * 10 us = 12ms
+        self.write_register(TimeoutRssiThresh::new().with_value(64))?;
 
-        self.write_regs(
-            Lna::ADDRESS,
-            &Lna::new()
+        self.write_register(
+            Lna::new()
                 .with_zin(LnaZin::Zin50Ohm)
-                .with_gain_select(LnaGainSelect::Agc)
-                .into_bytes(),
+                .with_gain_select(LnaGainSelect::Agc),
         )?;
 
-        self.write_regs(
-            0x58, // RegTestLna
-            &[0x2d],
-        )?; // SensitivityBoost
+        self.write_register(
+            TestLna::new().with_sensitivity_boost(SensitivityBoost::HighSensitivity),
+        )?;
 
         // Configure power amplifier
         self.set_power(config.power)?;
@@ -256,19 +223,16 @@ where
 
     fn set_sync_word(&mut self, sync_word: &[u8]) -> Result<(), Error<SpiError, PinError>> {
         if !sync_word.is_empty() {
-            self.write_regs(
-                SyncConfig::ADDRESS,
-                &SyncConfig::new()
+            self.write_register(
+                SyncConfig::new()
                     .with_sync_on(true)
-                    .with_size_minus_one(sync_word.len() as u8 - 1)
-                    .into_bytes(),
+                    .with_size_minus_one(sync_word.len() as u8 - 1),
             )?;
-            self.write_regs(SyncValue::ADDRESS, sync_word)?;
+            let mut sync_value = [0u8; 8];
+            sync_value[..sync_word.len()].copy_from_slice(sync_word);
+            self.write_register(SyncValue::new().with_value(u64::from_be_bytes(sync_value)))?;
         } else {
-            self.write_regs(
-                SyncConfig::ADDRESS,
-                &SyncConfig::new().with_sync_on(false).into_bytes(),
-            )?;
+            self.write_register(SyncConfig::new().with_sync_on(false))?;
         }
         Ok(())
     }
@@ -288,94 +252,11 @@ where
     // Set the channel by frequency
     pub fn set_frequency(&mut self, freq: u32) -> Result<(), Error<SpiError, PinError>> {
         let channel = self.freq_to_channel_index(freq);
-
-        let outgoing = [(channel >> 16) as u8, (channel >> 8) as u8, channel as u8];
-
         debug!("Set channel to index: {:?} (freq: {:?})", channel, freq);
-
-        self.write_regs(CarrierFreq::ADDRESS, &outgoing)?;
-
-        Ok(())
+        self.write_register(CarrierFreq::new().with_freq(channel))
     }
 
-    /// Read a u8 value from the specified register
-    pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Error<SpiError, PinError>>
-    where
-        R: Copy + Clone + Debug + Into<u8>,
-    {
-        let mut incoming = [0u8; 1];
-        self.read_regs(reg.into(), &mut incoming)?;
-        Ok(incoming[0])
-    }
-
-    /// Write a u8 value to the specified register
-    pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Error<SpiError, PinError>>
-    where
-        R: Copy + Clone + Debug + Into<u8>,
-    {
-        self.write_regs(reg.into(), &[value])?;
-
-        Ok(())
-    }
-
-    /// Update the specified register with the provided value & mask
-    pub fn update_reg<R>(
-        &mut self,
-        reg: R,
-        mask: u8,
-        value: u8,
-    ) -> Result<(), Error<SpiError, PinError>>
-    where
-        R: Copy + Clone + Debug + Into<u8>,
-    {
-        let existing = self.read_reg(reg)?;
-        let updated = (existing & !mask) | (value & mask);
-        self.write_reg(reg, updated)?;
-
-        Ok(())
-    }
-
-    /// Read from the specified register
-    fn read_regs<R>(&mut self, reg: R, data: &mut [u8]) -> Result<(), Error<SpiError, PinError>>
-    where
-        R: Copy + Clone + Debug + Into<u8>,
-    {
-        self.cs.set_low().map_err(|e| Error::Pin(e))?;
-
-        // Send command then read data
-        self.spi
-            .write(&[reg.into() & 0x7F])
-            .map_err(|e| Error::Spi(e))?;
-        self.spi.transfer(data).map_err(|e| Error::Spi(e))?;
-
-        self.cs.set_high().map_err(|e| Error::Pin(e))?;
-
-        Ok(())
-    }
-
-    /// Write to the specified register
-    fn write_regs<R>(&mut self, reg: R, data: &[u8]) -> Result<(), Error<SpiError, PinError>>
-    where
-        R: Copy + Clone + Debug + Into<u8>,
-    {
-        self.cs.set_low().map_err(|e| Error::Pin(e))?;
-        #[cfg(feature = "log")]
-        trace!("Write reg:  {:?} (0x{:02x}): {:x?}", reg, reg.into(), data);
-        #[cfg(feature = "defmt")]
-        trace!("Write reg:  {} (0x{}): {}", reg, reg.into(), data);
-
-        // Send command then write data
-        self.spi
-            .write(&[reg.into() | 0x80])
-            .map_err(|e| Error::Spi(e))?;
-        self.spi.write(data).map_err(|e| Error::Spi(e))?;
-
-        self.cs.set_high().map_err(|e| Error::Pin(e))?;
-
-        Ok(())
-    }
-
-    /// Write to the specified buffer
+    /// Write to the FIFO buffer
     fn write_fifo(&mut self, data: &[u8]) -> Result<(), Error<SpiError, PinError>> {
         self.cs.set_low().map_err(|e| Error::Pin(e))?;
 
@@ -392,7 +273,7 @@ where
         Ok(())
     }
 
-    /// Read from the specified buffer
+    /// Read from the FIFO buffer
     fn read_fifo(&mut self, len: usize) -> Result<(), Error<SpiError, PinError>> {
         let rx_buf_len = self.rx_buf_len;
         if rx_buf_len + len > self.rx_buf.len() {
@@ -466,16 +347,14 @@ where
 
     /// Fetch device modem mode
     fn get_state(&mut self) -> Result<Self::State, Self::Error> {
-        let op_mode = OpMode::from_bytes([self.read_reg(OpMode::ADDRESS)?]);
-        Ok(op_mode.modem_mode())
+        Ok(self.read_register::<OpMode>()?.modem_mode())
     }
 
     /// Set device modem mode
     fn set_state(&mut self, state: Self::State) -> Result<(), Self::Error> {
         let mut op_mode = self.read_register::<OpMode>()?;
         op_mode.set_modem_mode(state);
-        self.write_regs(OpMode::ADDRESS, &op_mode.into_bytes())?;
-        Ok(())
+        self.write_register(op_mode)
     }
 }
 
@@ -507,7 +386,7 @@ where
 
         debug!("Updated PA config for {} dBm: {:?}", power, config);
 
-        self.write_regs(PaLevel::ADDRESS, &config.into_bytes())?;
+        self.write_register(config)?;
 
         Ok(())
     }
@@ -526,15 +405,10 @@ where
     /// Fetch pending interrupts from the device
     /// If the clear option is set, this will also clear any pending flags
     fn get_interrupts(&mut self, clear: bool) -> Result<Self::Irq, Self::Error> {
-        let mut regs = [0u8; 2];
-        self.read_regs(IrqFlags::ADDRESS, &mut regs)?;
-        let irq = IrqFlags::from_bytes(regs);
+        let irq: IrqFlags = self.read_register()?;
 
         if clear {
-            self.write_regs(
-                IrqFlags::ADDRESS,
-                &irq.with_rssi(false).with_fifo_overrun(false).into_bytes(),
-            )?;
+            self.write_register(irq.with_rssi(false).with_fifo_overrun(false))?;
         }
 
         Ok(irq)
@@ -573,19 +447,15 @@ where
         trace!("fdev: {} bitrate: {}", fdev, datarate);
 
         // Set frequency deviation
-        self.write_regs(FreqDev::ADDRESS, &[(fdev >> 8) as u8, (fdev & 0xFF) as u8])?;
-        // self.write_regs(FreqDev::ADDRESS, FreqDev::new().with_freq_dev(fdev).into_bytes())?;
+        self.write_register(FreqDev::new().with_freq_dev(fdev))?;
 
         // Set bitrate
         // self.write_regs(Bitrate::ADDRESS, Bitrate::new().with_bitrate(datarate).into_bytes())?;
-        self.write_regs(
-            Bitrate::ADDRESS,
-            &[(datarate >> 8) as u8, (datarate & 0xFF) as u8],
-        )?;
+        self.write_register(Bitrate::new().with_bitrate(datarate))?;
 
         // Set bandwidths
-        self.write_reg(RxBw::ADDRESS, 0b0100_0000 | channel.bw as u8)?;
-        self.write_reg(AfcBw::ADDRESS, 0b0100_0000 | channel.bw_afc as u8)?;
+        self.write_register(RxBw::new().with_bw(channel.bw))?;
+        self.write_register(AfcBw::new().with_bw(channel.bw_afc))?;
 
         Ok(())
     }
@@ -781,8 +651,8 @@ where
     /// Poll for the current channel RSSI
     /// This should only be called in receive mode
     fn poll_rssi(&mut self) -> Result<i16, Error<SpiError, PinError>> {
-        let rssi = -(self.read_reg(RssiValue::ADDRESS)? as i16) / 2;
-
+        let reg: u8 = self.read_register::<RssiValue>()?.into();
+        let rssi = -(i16::from(reg)) / 2;
         Ok(rssi)
     }
 }
@@ -796,11 +666,11 @@ pub trait RegisterWord {
 impl RegisterWord for u8 {
     type Bytes = [u8; 1];
 
-    fn to_bytes(self) -> [u8; 1] {
+    fn to_bytes(self) -> Self::Bytes {
         self.to_be_bytes()
     }
 
-    fn from_bytes(bytes: [u8; 1]) -> Self {
+    fn from_bytes(bytes: Self::Bytes) -> Self {
         Self::from_be_bytes(bytes)
     }
 }
@@ -808,11 +678,35 @@ impl RegisterWord for u8 {
 impl RegisterWord for u16 {
     type Bytes = [u8; 2];
 
-    fn to_bytes(self) -> [u8; 2] {
+    fn to_bytes(self) -> Self::Bytes {
         self.to_be_bytes()
     }
 
-    fn from_bytes(bytes: [u8; 2]) -> Self {
+    fn from_bytes(bytes: Self::Bytes) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+}
+
+impl RegisterWord for [u8; 3] {
+    type Bytes = [u8; 3];
+
+    fn to_bytes(self) -> Self::Bytes {
+        self
+    }
+
+    fn from_bytes(bytes: Self::Bytes) -> Self {
+        bytes
+    }
+}
+
+impl RegisterWord for u64 {
+    type Bytes = [u8; 8];
+
+    fn to_bytes(self) -> Self::Bytes {
+        self.to_be_bytes()
+    }
+
+    fn from_bytes(bytes: Self::Bytes) -> Self {
         Self::from_be_bytes(bytes)
     }
 }

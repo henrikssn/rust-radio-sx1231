@@ -646,9 +646,24 @@ impl radio::Register for RssiThreshold {
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(u8)]
+pub struct TimeoutRssiThresh {
+    pub value: u8,
+}
+
+impl radio::Register for TimeoutRssiThresh {
+    const ADDRESS: u8 = 0x2B;
+    type Word = u8;
+    type Error = Infallible;
+}
+
+#[bitfield]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u16)]
 pub struct Preamble {
-    pub size: u16,
+    pub length: u16,
 }
 
 impl radio::Register for Preamble {
@@ -688,14 +703,14 @@ impl radio::Register for SyncConfig {
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[repr(u8)]
+#[repr(u64)]
 pub struct SyncValue {
-    pub value: B8,
+    pub value: B64,
 }
 
 impl radio::Register for SyncValue {
     const ADDRESS: u8 = 0x2f;
-    type Word = u8;
+    type Word = u64;
     type Error = Infallible;
 }
 
@@ -773,7 +788,7 @@ impl radio::Register for PacketConfig1 {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub struct PayloadLength {
-    pub value: u8,
+    pub length: u8,
 }
 
 impl radio::Register for PayloadLength {
@@ -841,6 +856,70 @@ pub struct PacketConfig2 {
 
 impl radio::Register for PacketConfig2 {
     const ADDRESS: u8 = 0x3D;
+    type Word = u8;
+    type Error = Infallible;
+}
+
+#[derive(BitfieldSpecifier, Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[bits = 8]
+pub enum SensitivityBoost {
+    NormalMode = 0x1B,
+    HighSensitivity = 0x2D,
+}
+
+#[bitfield]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(u8)]
+pub struct TestLna {
+    pub sensitivity_boost: SensitivityBoost,
+}
+
+impl radio::Register for TestLna {
+    const ADDRESS: u8 = 0x6F;
+    type Word = u8;
+    type Error = Infallible;
+}
+
+#[derive(BitfieldSpecifier, Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[bits = 8]
+pub enum ContinousDagc {
+    NormalMode = 0x10,
+    ImprovedMarginLowBetaOn = 0x20,
+    ImprovedMarginLowBetaOff = 0x30,
+}
+
+#[bitfield]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(u8)]
+pub struct TestDagc {
+    pub continous_dagc: ContinousDagc,
+}
+
+impl radio::Register for TestDagc {
+    const ADDRESS: u8 = 0x6F;
+    type Word = u8;
+    type Error = Infallible;
+}
+
+#[bitfield]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(u8)]
+pub struct TestAfc {
+    pub low_beta_offset: u8,
+}
+
+impl radio::Register for TestAfc {
+    const ADDRESS: u8 = 0x71;
     type Word = u8;
     type Error = Infallible;
 }
