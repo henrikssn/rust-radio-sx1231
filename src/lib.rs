@@ -23,9 +23,6 @@ use log::{debug, trace, warn};
 #[cfg(feature = "defmt")]
 use defmt::{debug, trace, warn};
 
-extern crate modular_bitfield;
-use modular_bitfield::prelude::*;
-
 #[cfg(feature = "serde")]
 extern crate serde;
 
@@ -37,7 +34,9 @@ use hal::blocking::spi::{Transfer, Write};
 use hal::digital::v2::OutputPin;
 
 extern crate radio;
-use radio::{Channel as _, Interrupts as _, Power as _, Rssi as _, State as _};
+use radio::{
+    Channel as _, Interrupts as _, Power as _, Register as _, Registers as _, Rssi as _, State as _,
+};
 
 pub mod prelude;
 use prelude::*;
@@ -91,12 +90,16 @@ pub enum Error<SpiError, PinError> {
     InvalidDevice(u8),
     /// Packet size disagrees with FIFO interrupt (first is packet len, second is buffer size)
     InvalidPacketSize(usize, usize),
+    // #[error("Unexpected register value (address: 0x{0:02x})")]
+    UnexpectedValue(u8),
 }
 
 impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     /// Create a new radio instance with the provided SPI implementation and pins
     pub fn new(spi: Spi, cs: CsPin) -> Self {
@@ -121,6 +124,8 @@ impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     /// (re)apply device configuration
     pub fn configure(&mut self, config: &Config) -> Result<(), Error<SpiError, PinError>> {
@@ -270,7 +275,7 @@ where
 
     /// Fetch device silicon version
     pub fn silicon_version(&mut self) -> Result<u8, Error<SpiError, PinError>> {
-        self.read_reg(Version::ADDRESS)
+        self.read_register::<Version>().map(|r| r.into())
     }
 
     // Calculate a channel number from a given frequency
@@ -301,15 +306,6 @@ where
         let mut incoming = [0u8; 1];
         self.read_regs(reg.into(), &mut incoming)?;
         Ok(incoming[0])
-    }
-
-    pub fn read_register<R>(&mut self) -> Result<R::InOut, Error<SpiError, PinError>>
-    where
-        R: Reg + Specifier<Bytes = u8>,
-    {
-        let data = self.read_reg(R::ADDRESS)?;
-        let reg = R::from_bytes(data).unwrap();
-        Ok(reg)
     }
 
     /// Write a u8 value to the specified register
@@ -429,6 +425,8 @@ impl<Spi, CsPin, SpiError, PinError> Sx1231<Spi, CsPin, SpiError, PinError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     pub fn set_state_checked(&mut self, state: ModemMode) -> Result<(), Error<SpiError, PinError>> {
         // Send set state command
@@ -460,6 +458,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::State for Sx1231<Spi, CsPin, SpiErro
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type State = ModemMode;
     type Error = Error<SpiError, PinError>;
@@ -483,6 +483,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Power for Sx1231<Spi, CsPin, SpiErro
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Error = Error<SpiError, PinError>;
 
@@ -515,6 +517,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Interrupts for Sx1231<Spi, CsPin, Sp
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Irq = IrqFlags;
     type Error = Error<SpiError, PinError>;
@@ -541,6 +545,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Channel for Sx1231<Spi, CsPin, SpiEr
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Channel = Channel;
     type Error = Error<SpiError, PinError>;
@@ -589,6 +595,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Transmit for Sx1231<Spi, CsPin, SpiE
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Error = Error<SpiError, PinError>;
 
@@ -656,6 +664,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Receive for Sx1231<Spi, CsPin, SpiEr
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Info = PacketInfo;
     type Error = Error<SpiError, PinError>;
@@ -741,11 +751,8 @@ where
     ///
     /// This copies data into the provided slice, updates the provided information object,
     ///  and returns the number of bytes received on success
-    fn get_received(
-        &mut self,
-        info: &mut Self::Info,
-        data: &mut [u8],
-    ) -> Result<usize, Self::Error> {
+    fn get_received(&mut self, data: &mut [u8]) -> Result<(usize, Self::Info), Self::Error> {
+        let mut info = PacketInfo::default();
         // Read the RSSI
         info.rssi = self.poll_rssi()?;
         // First byte is length and should not be returned.
@@ -758,7 +765,7 @@ where
         #[cfg(feature = "defmt")]
         debug!("Received data: {} info: {:?}", packet_data, &info);
 
-        Ok(packet_data.len())
+        Ok((packet_data.len(), info))
     }
 }
 
@@ -766,6 +773,8 @@ impl<Spi, CsPin, SpiError, PinError> radio::Rssi for Sx1231<Spi, CsPin, SpiError
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
 {
     type Error = Error<SpiError, PinError>;
 
@@ -775,6 +784,78 @@ where
         let rssi = -(self.read_reg(RssiValue::ADDRESS)? as i16) / 2;
 
         Ok(rssi)
+    }
+}
+
+pub trait RegisterWord {
+    type Bytes: Default + core::convert::AsMut<[u8]>;
+    fn to_bytes(self) -> Self::Bytes;
+    fn from_bytes(bytes: Self::Bytes) -> Self;
+}
+
+impl RegisterWord for u8 {
+    type Bytes = [u8; 1];
+
+    fn to_bytes(self) -> [u8; 1] {
+        self.to_be_bytes()
+    }
+
+    fn from_bytes(bytes: [u8; 1]) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+}
+
+impl RegisterWord for u16 {
+    type Bytes = [u8; 2];
+
+    fn to_bytes(self) -> [u8; 2] {
+        self.to_be_bytes()
+    }
+
+    fn from_bytes(bytes: [u8; 2]) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+}
+
+impl<Spi, CsPin, SpiError, PinError, Word, Bytes> radio::Registers<Word>
+    for Sx1231<Spi, CsPin, SpiError, PinError>
+where
+    Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
+    CsPin: OutputPin<Error = PinError>,
+    SpiError: Debug,
+    PinError: Debug,
+    Word: RegisterWord<Bytes = Bytes>,
+    Bytes: Default + core::convert::AsMut<[u8]>,
+{
+    type Error = Error<SpiError, PinError>;
+
+    fn read_register<R: radio::Register<Word = Word>>(
+        &mut self,
+    ) -> Result<R, Error<SpiError, PinError>> {
+        let mut bytes = Bytes::default();
+
+        self.cs.set_low().map_err(|e| Error::Pin(e))?;
+        self.spi.write(&[R::ADDRESS]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .transfer(bytes.as_mut())
+            .map_err(|e| Error::Spi(e))?;
+        self.cs.set_high().map_err(|e| Error::Pin(e))?;
+
+        let d = R::Word::from_bytes(bytes);
+        R::try_from(d).map_err(|_| Error::UnexpectedValue(R::ADDRESS))
+    }
+
+    fn write_register<R: radio::Register<Word = Word>>(
+        &mut self,
+        r: R,
+    ) -> Result<(), Error<SpiError, PinError>> {
+        self.cs.set_low().map_err(|e| Error::Pin(e))?;
+        self.spi.write(&[R::ADDRESS]).map_err(|e| Error::Spi(e))?;
+        self.spi
+            .write(r.into().to_bytes().as_mut())
+            .map_err(|e| Error::Spi(e))?;
+        self.cs.set_high().map_err(|e| Error::Pin(e))?;
+        Ok(())
     }
 }
 
